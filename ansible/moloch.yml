@@ -1,0 +1,80 @@
+- name: Setup Moloch
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Add Moloch to PATH
+    lineinfile:
+      path: /etc/bash.bashrc
+      regexp: "^export PATH=$PATH:/data/moloch/bin:/data/moloch/db"
+      line: "export PATH=$PATH:/data/moloch/bin:/data/moloch/db"
+
+  - name: Run Moloch DB Init
+    command: "/data/moloch/db/db.pl http://localhost:9200 init --shards 1 --replicas 0"
+
+  - name: Copy Moloch configuration sample
+    copy:
+      src: /data/moloch/etc/config.ini.sample
+      dest: /data/moloch/etc/config.ini
+      mode: '644'
+
+  - name: Set elasticsearch line
+    ini_file:
+      path: /data/moloch/etc/config.ini
+      section: default
+      option: elasticsearch
+      value: "http://localhost:9200"
+      no_extra_spaces: yes
+
+  - name: Set passwordSecret line
+    ini_file:
+      path: /data/moloch/etc/config.ini
+      section: default
+      option: passwordSecret
+      state: absent
+
+  - name: Set serverSecret line
+    ini_file:
+      path: /data/moloch/etc/config.ini
+      section: default
+      option: serverSecret
+      value: AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      no_extra_spaces: yes
+
+  - name: Replace MOLOCH_INSTALL_DIR
+    replace:
+      path: /data/moloch/etc/config.ini
+      regexp: "MOLOCH_INSTALL_DIR"
+      replace: "/data/moloch"
+
+  - name: Copy Moloch viewer service file
+    copy:
+      src: /data/moloch/etc/molochviewer.systemd.service
+      dest: /usr/lib/systemd/system/molochviewer.service
+
+  - name: Replace MOLOCH_INSTALL_DIR in service file
+    replace:
+      path: /usr/lib/systemd/system/molochviewer.service
+      regexp: "MOLOCH_INSTALL_DIR"
+      replace: "/data/moloch"
+
+  - name: Create /data/moloch/logs directory
+    file:
+      path: /data/moloch/logs
+      state: directory
+      owner: nobody
+
+  - name: Create /data/moloch/raw directory
+    file:
+      path: /data/moloch/raw
+      state: directory
+      owner: nobody
+
+  - name: Run moloch_update_geo script
+    command: /data/moloch/bin/moloch_update_geo.sh
+
+  - name: start molochviewer
+    systemd:
+      name: molochviewer
+      state: restarted
+      enabled: yes
+      daemon_reload: yes

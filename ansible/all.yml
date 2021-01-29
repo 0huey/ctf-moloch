@@ -1,0 +1,2 @@
+- import_playbook: elasticsearch.yml
+- import_playbook: moloch.yml

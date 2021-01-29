@@ -1,0 +1,38 @@
+- name: Setup Elasticsearch
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set cluster.name
+    lineinfile:
+      path: /etc/elasticsearch/elasticsearch.yml
+      regexp: "^cluster.name:"
+      line: "cluster.name: moloch"
+
+  - name: Set discovery.type
+    lineinfile:
+      path: /etc/elasticsearch/elasticsearch.yml
+      regexp: "^discovery.type:"
+      line: "discovery.type: single-node"
+
+  - name: Set network.host
+    lineinfile:
+      path: /etc/elasticsearch/elasticsearch.yml
+      regexp: "^network.host:"
+      line: "network.host: 0.0.0.0"
+
+  - name: Set xpack.security.enabled
+    lineinfile:
+      path: /etc/elasticsearch/elasticsearch.yml
+      regexp: "^xpack.security.enabled:"
+      line: "xpack.security.enabled: false"
+
+  - name: Start Elasticsearch
+    systemd:
+      name: elasticsearch
+      state: restarted
+      enabled: yes
+
+  - name: Wait for Elasticsearch to start
+    wait_for:
+      port: 9200
+      delay: 1
